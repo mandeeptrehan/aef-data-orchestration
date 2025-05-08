@@ -94,10 +94,6 @@ default_args = {
     'retry_delay': timedelta(minutes=5)
 }
 
-sample_serverless_spark_mainframe_ingestion = extract_job_params('sample_serverless_spark_mainframe_ingestion','dataproc-serverless-job-executor')
-for key, value in sample_serverless_spark_mainframe_ingestion.items():
-	default_args['sample_serverless_spark_mainframe_ingestion'+key] = value
-
 sample_jdbc_dataflow_ingestion = extract_job_params('sample_jdbc_dataflow_ingestion','dataflow-flextemplate-job-executor')
 for key, value in sample_jdbc_dataflow_ingestion.items():
 	default_args['sample_jdbc_dataflow_ingestion'+key] = value
@@ -132,64 +128,6 @@ with models.DAG(
     with TaskGroup(group_id="Level_1") as tg_Level_1:
                    # Start thread group definition
            with TaskGroup(group_id="Level_1_Thread_1") as tg_level_1_Thread_1:
-                    with TaskGroup(group_id="sample_serverless_spark_mainframe_ingestion") as sample_serverless_spark_mainframe_ingestion:
-
-                           def push_batch_id_to_xcom(**context):
-                               context['task_instance'].xcom_push(key='batch-id', value=batch_id)
-
-                           push_batch_id_to_xcom_sample_serverless_spark_mainframe_ingestion = PythonOperator(
-                               task_id='batch_id',
-                               python_callable=push_batch_id_to_xcom,
-                               provide_context=True
-                           )
-
-                           # create batch
-                           create_batch_for_sample_serverless_spark_mainframe_ingestion = DataprocCreateBatchOperator(
-                               task_id="create_batch_for_sample_serverless_spark_mainframe_ingestion",
-                               batch={
-                                   "spark_batch": {
-                                       "jar_file_uris": [default_args['sample_serverless_spark_mainframe_ingestion' + 'jar_file_location']],
-                                       "main_class": default_args['sample_serverless_spark_mainframe_ingestion' + 'spark_app_main_class'],
-                                       "args": default_args['sample_serverless_spark_mainframe_ingestion' + 'spark_args'],
-                                   },
-                                   "runtime_config": {
-                                       "version": default_args['sample_serverless_spark_mainframe_ingestion' + 'dataproc_serverless_runtime_version'],
-                                       "properties": default_args['sample_serverless_spark_mainframe_ingestion' + 'spark_app_properties'],
-                                   },
-                                   "environment_config": {
-                                       "execution_config": {
-                                           "service_account": default_args['sample_serverless_spark_mainframe_ingestion' + 'dataproc_service_account'],
-                                           "subnetwork_uri": f"projects/{default_args['sample_serverless_spark_mainframe_ingestion' + 'dataproc_serverless_project_id']}/{default_args['sample_serverless_spark_mainframe_ingestion' + 'subnetwork']}"
-                                       }
-                                   }
-                               },
-                               batch_id="{{ task_instance.xcom_pull(task_ids='Level_1.Level_1_Thread_1.sample_serverless_spark_mainframe_ingestion.batch_id', key='batch-id') }}",
-                               project_id=default_args['sample_serverless_spark_mainframe_ingestion' + 'dataproc_serverless_project_id'],
-                               region=default_args['sample_serverless_spark_mainframe_ingestion' + 'dataproc_serverless_region'],
-                               deferrable=True
-                           )
-
-                           wait_for_batch_completion_for_sample_serverless_spark_mainframe_ingestion = DataprocBatchSensor(
-                               task_id='wait_for_batch_completion_for_sample_serverless_spark_mainframe_ingestion',
-                               batch_id="{{ task_instance.xcom_pull(task_ids='Level_1.Level_1_Thread_1.sample_serverless_spark_mainframe_ingestion.batch_id', key='batch-id') }}",
-                               region=default_args['sample_serverless_spark_mainframe_ingestion' + 'dataproc_serverless_region'],
-                               poke_interval=400,
-                               timeout=3600,
-                               soft_fail=True
-                           )
-
-                           get_batch_for_sample_serverless_spark_mainframe_ingestion = DataprocGetBatchOperator(
-                               task_id="get_batch_for_sample_serverless_spark_mainframe_ingestion",
-                               batch_id="{{ task_instance.xcom_pull(task_ids='Level_1.Level_1_Thread_1.sample_serverless_spark_mainframe_ingestion.batch_id', key='batch-id') }}",
-                               region=default_args['sample_serverless_spark_mainframe_ingestion' + 'dataproc_serverless_region']
-                           )
-
-                           push_batch_id_to_xcom_sample_serverless_spark_mainframe_ingestion >> create_batch_for_sample_serverless_spark_mainframe_ingestion >> wait_for_batch_completion_for_sample_serverless_spark_mainframe_ingestion >> get_batch_for_sample_serverless_spark_mainframe_ingestion
-
-
-                    sample_serverless_spark_mainframe_ingestion
-           # End thread group definition           # Start thread group definition
-           with TaskGroup(group_id="Level_1_Thread_2") as tg_level_1_Thread_2:
                     with TaskGroup(group_id="sample_jdbc_dataflow_ingestion") as sample_jdbc_dataflow_ingestion:
                         dataflow_job_name = re.sub(r"^\d+", "",re.sub(r"[^a-z0-9+]", "", "sample_jdbc_dataflow_ingestion"))
                         dataflow_job_name = re.sub(r"^\d+", "", dataflow_job_name)
@@ -221,12 +159,11 @@ with models.DAG(
            # End thread group definition
 
            tg_level_1_Thread_1
-           tg_level_1_Thread_2
     # End level group definition
     # Start level group definition
     with TaskGroup(group_id="Level_2") as tg_Level_2:
                    # Start thread group definition
-           with TaskGroup(group_id="Level_2_Thread_3") as tg_level_2_Thread_3:
+           with TaskGroup(group_id="Level_2_Thread_2") as tg_level_2_Thread_2:
                     with TaskGroup(group_id="run_dataform_tag") as run_dataform_tag:
                            # compilation
                            create_compilation_result_for_run_dataform_tag = DataformCreateCompilationResultOperator(
@@ -253,7 +190,7 @@ with models.DAG(
                                task_id='workflow_inv_run_dataform_tag',
                                asynchronous=True,
                                workflow_invocation={
-                                   "compilation_result": "{{ task_instance.xcom_pull('Level_2.Level_2_Thread_3.run_dataform_tag.compilation_task_run_dataform_tag')['name'] }}",
+                                   "compilation_result": "{{ task_instance.xcom_pull('Level_2.Level_2_Thread_2.run_dataform_tag.compilation_task_run_dataform_tag')['name'] }}",
                                    "invocation_config": { "included_tags": default_args['run_dataform_tag'+'tags'],
                                                           "transitive_dependencies_included": True
                                                         }
@@ -266,7 +203,7 @@ with models.DAG(
                                region=default_args['run_dataform_tag' + 'dataform_location'],
                                repository_id=default_args['run_dataform_tag' + 'repository_name'],
                                task_id="is_workflow_run_dataform_tag_invocation_done",
-                               workflow_invocation_id=("{{ task_instance.xcom_pull('Level_2.Level_2_Thread_3.run_dataform_tag.workflow_inv_run_dataform_tag')['name'].split('/')[-1] }}"),
+                               workflow_invocation_id=("{{ task_instance.xcom_pull('Level_2.Level_2_Thread_2.run_dataform_tag.workflow_inv_run_dataform_tag')['name'].split('/')[-1] }}"),
                                expected_statuses={WorkflowInvocation.State.SUCCEEDED},
                                failure_statuses={WorkflowInvocation.State.FAILED, WorkflowInvocation.State.CANCELLED},
                            )
@@ -277,7 +214,7 @@ with models.DAG(
                     run_dataform_tag
            # End thread group definition
 
-           tg_level_2_Thread_3
+           tg_level_2_Thread_2
     # End level group definition
 
 

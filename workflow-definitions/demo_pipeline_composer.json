@@ -9,17 +9,6 @@
           "STEPS": [
             {
               "JOB_ID": "J01",
-              "JOB_NAME": "sample_serverless_spark_mainframe_ingestion",
-              "TYPE": "async",
-              "COMPOSER_STEP": "dataproc-serverless-job-executor"
-            }
-          ]
-        }
-        ,{
-          "THREAD_ID": "2",
-          "STEPS": [
-            {
-              "JOB_ID": "J02",
               "JOB_NAME": "sample_jdbc_dataflow_ingestion",
               "TYPE": "async",
               "COMPOSER_STEP": "dataflow-flextemplate-job-executor"
@@ -32,10 +21,10 @@
       "LEVEL_ID": "2",
       "THREADS": [
         {
-          "THREAD_ID": "3",
+          "THREAD_ID": "2",
           "STEPS": [
             {
-              "JOB_ID": "J03",
+              "JOB_ID": "J02",
               "JOB_NAME": "run_dataform_tag",
               "TYPE": "async",
               "COMPOSER_STEP": "dataform-tag-executor"
